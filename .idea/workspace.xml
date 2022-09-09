@@ -1,7 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c34620f4-67d0-4815-a7a8-733476b58c48" name="Changes" comment="" />
+    <list default="true" id="c34620f4-67d0-4815-a7a8-733476b58c48" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paatr/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paatr/decorators.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paatr/endpoints/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paatr/endpoints/auth.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paatr/endpoints/service.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paatr/exceptions.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paatr/factory.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paatr/helpers.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paatr/logging.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paatr/models.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/test_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend" beforeDir="false" afterPath="$PROJECT_DIR$/paatr-backend" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/main.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/paatr/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/paatr/decorators.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/paatr/endpoints/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/paatr/endpoints/auth.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/paatr/endpoints/service.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/paatr/exceptions.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/paatr/factory.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/paatr/helpers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/paatr/logging.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/paatr/models.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/requirements.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/tests/conftest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr-backend/tests/test_service.py" beforeDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -38,9 +72,9 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\opara\PycharmProjects\paatr" />
       <recent name="C:\Users\opara\PycharmProjects\paatr\paatr-backend" />
       <recent name="C:\Users\opara\PycharmProjects\paatr\paatr" />
-      <recent name="C:\Users\opara\PycharmProjects\paatr" />
     </key>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
