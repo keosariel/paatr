@@ -8,15 +8,15 @@ This module contains the service endpoints for the API.
 - Getting a service/application
 - Getting all services/applications
 """
-
+import os
 from typing import Union
 
-
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from ..models import App
-# from ..decorators import auth_required
+from .. import APP_FILES_DIR
+from ..helpers import save_file
 
 service_router = APIRouter()
 
@@ -32,6 +32,15 @@ async def hello():
 
 @service_router.post("/service/app")
 async def register_app(_app: AppItem):
+    """
+    Register a new application
+
+    Args:
+        _app (AppItem): The application data
+    
+    Returns:
+        dict: The application data
+    """
     app = App(user_id=_app.user_id, name=_app.name, description=_app.description)
     data = app.register()
 
@@ -42,9 +51,48 @@ async def register_app(_app: AppItem):
 
 @service_router.get("/service/app/{app_id}")
 async def register_app(app_id: str):
+    """
+    Retrieve an application data
+
+    Args:
+        app_id (str): The ID of the application
+    
+    Returns:
+        dict: The application data
+    """
     data = App.get(app_id)
 
     if not data:
         return HTTPException(status_code=404, detail="App not found")
     
     return data.to_dict()
+
+@service_router.post("/service/app/{app_id}/upload")
+async def app_files(app_id: str, file: UploadFile):
+    """
+    Upload the files for an application
+
+    Args:
+        app_id (str): The ID of the application
+        file (UploadFile): The file to upload
+    
+    Returns:
+        dict: The file data
+    """
+    app_data = App.get(app_id)
+
+    if not app_data:
+        return HTTPException(status_code=404, detail="App not found")
+    
+    if not file:
+        return {"message": "No file sent"}
+
+    if file.content_type != "application/zip":
+        return {"message": "File is not a zip file"}
+
+    contents = await file.read()
+    
+    if not await save_file(app_data.name+".zip", APP_FILES_DIR, contents):
+        return {"message": "Failed to save app content"}
+    
+    return {"filename": file.filename, "fileb_content_type": file.content_type}
