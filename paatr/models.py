@@ -3,16 +3,16 @@ import pprint
 import re
 from uuid import uuid4
 
-
 from . import supabase
 
-NAME_REGEX = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
+NAME_REGEX = re.compile(r"^[a-zA-Z/d_-]{3,20}$")
+
 
 class App:
     table = "paatr-app"
 
-    def __init__(self, user_id, name, description, created_at=None, 
-                    updated_at=None, deleted=False, app_id=None, **kwargs):
+    def __init__(self, user_id: str, name: str, description: str, created_at: datetime | None = None,
+                 updated_at: datetime | None = None, deleted: bool = False, app_id: str | None = None, **kwargs):
         """
         Creates a new App object.
 
@@ -33,13 +33,13 @@ class App:
 
         if len(description) > 100:
             raise ValueError("Description too long")
-        
+
         name = name.lower()
 
         if not app_id:
             if App.get_by("name", name):
                 raise ValueError("Name already taken")
-            
+
         self.app_id = app_id or uuid4()
         self.user_id = user_id
         self.name = name
@@ -70,7 +70,7 @@ class App:
             return None
 
         return cls.from_dict(**data.data[0])
-    
+
     @classmethod
     def get_by(cls, key, value):
         """
@@ -87,7 +87,7 @@ class App:
         print(data)
         if not data.data:
             return None
-        
+
         return cls.from_dict(**data.data[0])
 
     def register(self):
@@ -122,5 +122,3 @@ class App:
 
     def __repr__(self):
         return pprint.pformat(self.to_dict())
-    
-
