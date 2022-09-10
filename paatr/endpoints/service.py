@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from ..models import App
 from .. import APP_FILES_DIR
-from ..helpers import save_file
+from ..helpers import save_file, build_app
 
 service_router = APIRouter()
 
@@ -96,3 +96,15 @@ async def app_files(app_id: str, file: UploadFile):
         return {"message": "Failed to save app content"}
     
     return {"filename": file.filename, "fileb_content_type": file.content_type}
+
+
+@service_router.post("/service/app/{app_id}/build")
+async def build_app_(app_id: str):
+    app_data = App.get(app_id)
+    
+    if not app_data:
+        return HTTPException(status_code=404, detail="App not found")
+    
+    app_path = os.path.join(APP_FILES_DIR, app_data.name+".zip")
+    
+    return {"message": await build_app(app_path)}
