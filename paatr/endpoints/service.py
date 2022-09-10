@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from ..models import App
 from .. import APP_FILES_DIR
-from ..helpers import save_file, build_app
+from ..helpers import save_file, build_app, run_docker_image, get_image
 
 service_router = APIRouter()
 
@@ -107,4 +107,19 @@ async def build_app_(app_id: str):
     
     app_path = os.path.join(APP_FILES_DIR, app_data.name+".zip")
     
-    return {"message": await build_app(app_path)}
+    return {"message": await build_app(app_path, app_data.name)}
+
+
+@service_router.post("/service/app/{app_id}/run")
+async def run_app(app_id: str):
+    app_data = App.get(app_id)
+    
+    if not app_data:
+        return HTTPException(status_code=404, detail="App not found")
+
+    if not get_image(app_data.name):
+        return {"message": "App has not been built"}
+    
+    await run_docker_image(app_data.name)
+
+    

@@ -1,5 +1,6 @@
 import os
 
+import docker
 from dotenv import dotenv_values
 from supabase import create_client, Client
 
@@ -26,10 +27,12 @@ CONFIG_VALUE_VALIDATOR = {
 }
 
 DOCKER_TEMPLATE = """
-FROM python:{runtime}
+FROM python:3.9.14-alpine3.16
 WORKDIR /app
 COPY . .
 {run}
 EXPOSE {port}
 CMD {start}
 """
+
+DOCKER_CLIENT = docker.from_env()
