@@ -3,11 +3,12 @@ import tempfile
 import zipfile
 import yaml
 
+from docker.errors import ImageNotFound, NotFound
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from . import (APP_CONFIG_FILE, CONFIG_KEYS_X, CONFIG_KEYS, 
-                CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE)
+                CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE, DOCKER_CLIENT)
 
 async def handle_errors(request: Request, exc: Exception):
     return JSONResponse(
@@ -58,7 +59,7 @@ def generate_docker_config(config):
 
     return DOCKER_TEMPLATE.format(**config, run=f"RUN {run}")
 
-async def build_app(app_path):
+async def build_app(app_path, app_name):
     if not os.path.exists(app_path):
         return "No files found for this app"
     
@@ -82,7 +83,46 @@ async def build_app(app_path):
                 with open(os.path.join(tmp_dir, "dockerfile"), "w") as fp:
                     fp.write(dockerfile)
                 
+                image, _ = await build_docker_image(tmp_dir, app_name)
+
     except Exception as e:
         return "Failed to build app"
     
     return "App built successfully"
+
+async def build_docker_image(app_dir, app_name):
+    return DOCKER_CLIENT.images.build(path=app_dir, tag=app_name, rm=True)
+
+def get_image(app_name):
+    try:
+        return DOCKER_CLIENT.images.get(app_name)
+    except ImageNotFound:
+        return None
+
+def get_container(app_name):
+    try:
+        return DOCKER_CLIENT.containers.get(app_name)
+    except NotFound:
+        return None
+
+def stop_container(app_name):
+    if cont := get_container(app_name):
+        cont.stop()
+
+def remove_container(app_name):
+    if cont := get_container(app_name):
+        cont.remove(force=True)
+
+async def run_docker_image(app_name):
+    if not get_image(app_name):
+        return "App not found"
+        
+    stop_container(app_name)
+
+    if cont := get_container(app_name):
+        cont.start()
+    else:
+        (DOCKER_CLIENT.containers
+                    .run(app_name, ports={'5000/tcp': 5000}, 
+                            detach=True, name=app_name)
+        )
