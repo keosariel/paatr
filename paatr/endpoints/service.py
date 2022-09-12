@@ -16,7 +16,8 @@ from pydantic import BaseModel
 
 from ..models import App
 from .. import APP_FILES_DIR
-from ..helpers import save_file, build_app, run_docker_image, get_image
+from ..helpers import (save_file, build_app, run_docker_image, 
+                        get_image, get_container)
 
 service_router = APIRouter()
 
@@ -30,7 +31,7 @@ class AppItem(BaseModel):
 async def hello():
     return {"hello": "world"}
 
-@service_router.post("/service/app")
+@service_router.post("/services/apps")
 async def register_app(_app: AppItem):
     """
     Register a new application
@@ -49,7 +50,7 @@ async def register_app(_app: AppItem):
 
     return app.to_dict()
 
-@service_router.get("/service/app/{app_id}")
+@service_router.get("/services/apps/{app_id}")
 async def register_app(app_id: str):
     """
     Retrieve an application data
@@ -67,7 +68,7 @@ async def register_app(app_id: str):
     
     return data.to_dict()
 
-@service_router.post("/service/app/{app_id}/upload")
+@service_router.post("/services/apps/{app_id}/upload")
 async def app_files(app_id: str, file: UploadFile):
     """
     Upload the files for an application
@@ -98,7 +99,7 @@ async def app_files(app_id: str, file: UploadFile):
     return {"filename": file.filename, "fileb_content_type": file.content_type}
 
 
-@service_router.post("/service/app/{app_id}/build")
+@service_router.post("/services/apps/{app_id}/build")
 async def build_app_(app_id: str):
     app_data = App.get(app_id)
     
@@ -110,7 +111,7 @@ async def build_app_(app_id: str):
     return {"message": await build_app(app_path, app_data.name)}
 
 
-@service_router.post("/service/app/{app_id}/run")
+@service_router.post("/services/apps/{app_id}/run")
 async def run_app(app_id: str):
     app_data = App.get(app_id)
     
@@ -122,4 +123,17 @@ async def run_app(app_id: str):
     
     await run_docker_image(app_data.name)
 
+@service_router.get("/services/apps/{app_id}/status")
+async def app_status(app_id: str):
+    app_data = App.get(app_id)
     
+    if not app_data:
+        return HTTPException(status_code=404, detail="App not found")
+
+    if not get_image(app_data.name):
+        return {"message": "App has not been built", "status": "not-built"}
+
+    if not get_container(app_data.name):
+        return {"message": "App is not running", "status": "not-running"}
+
+    return {"message": "App is running", "status": "running"}
