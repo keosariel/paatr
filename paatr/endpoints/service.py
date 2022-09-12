@@ -12,6 +12,7 @@ import os
 from typing import Union
 
 from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from ..models import App
