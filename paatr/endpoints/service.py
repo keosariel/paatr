@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from ..models import App
 from .. import APP_FILES_DIR
-from ..helpers import save_file, build_app, run_docker_image, get_image
+from ..helpers import save_file, build_app, run_docker_image, get_image, repo_clone
 
 service_router = APIRouter()
 
@@ -66,6 +66,32 @@ async def register_app(app_id: str):
         return HTTPException(status_code=404, detail="App not found")
     
     return data.to_dict()
+
+
+    @service_router.get("/repo_cloning/{git_url}")
+async def git_clone(git_url: str, folder_name: str):
+    """
+        Upload the files for an application
+        Args:
+            git_url (str): The URL of the GitHub repository to be cloned
+            folder_name (str): The name of the folder where the repo will be cloned
+
+        Returns:
+            JSONResponse
+        """
+    if not git_url:
+        return HTTPException(status_code=409, detail="Missing Repository link to clone")
+    if not folder_name:
+        return HTTPException(status_code=409, detail="Folder name missing")
+    if not await repo_clone(git_url, folder_name):
+        return {"message": "Failed to clone Repo"}
+    return JSONResponse(
+        {
+            "cloned": git_url,
+            "location": folder_name
+        }
+    )
+
 
 @service_router.post("/service/app/{app_id}/upload")
 async def app_files(app_id: str, file: UploadFile):
