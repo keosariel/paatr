@@ -6,6 +6,7 @@ import yaml
 from docker.errors import ImageNotFound, NotFound
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from git import Repo
 
 from . import (APP_CONFIG_FILE, CONFIG_KEYS_X, CONFIG_KEYS, 
                 CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE, DOCKER_CLIENT)
@@ -15,6 +16,18 @@ async def handle_errors(request: Request, exc: Exception):
         status_code=500,
         content={"message": str(exc)},
     )
+
+async def repo_clone(git_url: str, repo_dir: str) -> bool:
+    if not os.path.exists(repo_dir):
+        os.mkdir(repo_dir)
+    try:
+        os.chdir(repo_dir)
+        rep = os.getcwd()
+        Repo.clone_from(url=git_url, to_path=rep)
+    except Exception as exc:
+        return False
+    return True
+
 
 async def save_file(filename, dir_path, contents, _mode="wb"):
     if not os.path.exists(dir_path):
