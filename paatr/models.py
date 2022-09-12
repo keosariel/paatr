@@ -11,7 +11,7 @@ NAME_REGEX = re.compile(r"^[a-zA-Z/d_-]{3,20}$")
 class App:
     table = "paatr-app"
 
-    def __init__(self, user_id: str, name: str, description: str, created_at: datetime | None = None,
+    def __init__(self, user_id: str, name: str, description: str = ..., created_at: datetime | None = None,
                  updated_at: datetime | None = None, deleted: bool = False, app_id: str | None = None, **kwargs):
         """
         Creates a new App object.

@@ -3,7 +3,10 @@
   <component name="ChangeListManager">
     <list default="true" id="c34620f4-67d0-4815-a7a8-733476b58c48" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr/endpoints/service.py" beforeDir="false" afterPath="$PROJECT_DIR$/paatr/endpoints/service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paatr/helpers.py" beforeDir="false" afterPath="$PROJECT_DIR$/paatr/helpers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/paatr/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/paatr/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,13 +35,13 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "last_opened_file_path": "C:/Users/opara/PycharmProjects/paatr"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/opara/PycharmProjects/paatr&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\opara\PycharmProjects\paatr" />
