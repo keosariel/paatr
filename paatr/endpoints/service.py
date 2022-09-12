@@ -68,7 +68,7 @@ async def register_app(app_id: str):
     return data.to_dict()
 
 
-    @service_router.get("/repo_cloning/{git_url}")
+@service_router.get("/repo_cloning/{git_url}")
 async def git_clone(git_url: str, folder_name: str):
     """
         Upload the files for an application
