@@ -16,7 +16,8 @@ from pydantic import BaseModel
 
 from ..models import App
 from .. import APP_FILES_DIR
-from ..helpers import save_file, build_app, run_docker_image, get_image, repo_clone
+from ..helpers import (save_file, build_app, run_docker_image, 
+                        get_image, get_container)
 
 service_router = APIRouter()
 
@@ -25,12 +26,15 @@ class AppItem(BaseModel):
     user_id: str
     description: Union[str, None] = None
 
+class BuildItem(BaseModel):
+    username: str
+    gh_token: str
 
 @service_router.get("/")
 async def hello():
     return {"hello": "world"}
 
-@service_router.post("/service/app")
+@service_router.post("/services/apps")
 async def register_app(_app: AppItem):
     """
     Register a new application
@@ -49,7 +53,7 @@ async def register_app(_app: AppItem):
 
     return app.to_dict()
 
-@service_router.get("/service/app/{app_id}")
+@service_router.get("/services/apps/{app_id}")
 async def register_app(app_id: str):
     """
     Retrieve an application data
@@ -66,7 +70,6 @@ async def register_app(app_id: str):
         return HTTPException(status_code=404, detail="App not found")
     
     return data.to_dict()
-
 
 @service_router.get("/repo_cloning/{git_url}")
 async def git_clone(git_url: str, folder_name: str):
@@ -85,13 +88,11 @@ async def git_clone(git_url: str, folder_name: str):
         return HTTPException(status_code=409, detail="Folder name missing")
     if not await repo_clone(git_url, folder_name):
         return {"message": "Failed to clone Repo"}
-    return JSONResponse(
-        {
+    
+    return {
             "cloned": git_url,
             "location": folder_name
         }
-    )
-
 
 @service_router.post("/service/app/{app_id}/upload")
 async def app_files(app_id: str, file: UploadFile):
@@ -124,19 +125,21 @@ async def app_files(app_id: str, file: UploadFile):
     return {"filename": file.filename, "fileb_content_type": file.content_type}
 
 
-@service_router.post("/service/app/{app_id}/build")
-async def build_app_(app_id: str):
+@service_router.post("/services/apps/{app_id}/build")
+async def build_app_(app_id: str, build_data: BuildItem):
     app_data = App.get(app_id)
     
     if not app_data:
         return HTTPException(status_code=404, detail="App not found")
     
-    app_path = os.path.join(APP_FILES_DIR, app_data.name+".zip")
-    
-    return {"message": await build_app(app_path, app_data.name)}
+    repo = app_data.repo
+    # github_url = repo["git_url"].replace("git://", f"https://{build_data.username}:{build_data.gh_token}@")
+    github_url = repo["git_url"].replace("git://", f"https://")
+
+    return {"message": await build_app(github_url, app_data.name)}
 
 
-@service_router.post("/service/app/{app_id}/run")
+@service_router.post("/services/apps/{app_id}/run")
 async def run_app(app_id: str):
     app_data = App.get(app_id)
     
@@ -148,4 +151,17 @@ async def run_app(app_id: str):
     
     await run_docker_image(app_data.name)
 
+@service_router.get("/services/apps/{app_id}/status")
+async def app_status(app_id: str):
+    app_data = App.get(app_id)
     
+    if not app_data:
+        return HTTPException(status_code=404, detail="App not found")
+
+    if not get_image(app_data.name):
+        return {"message": "App has not been built", "status": "not-built"}
+
+    if not get_container(app_data.name):
+        return {"message": "App is not running", "status": "not-running"}
+
+    return {"message": "App is running", "status": "running"}
