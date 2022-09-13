@@ -15,7 +15,6 @@ from fastapi import APIRouter, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from ..models import App
-from .. import APP_FILES_DIR
 from ..helpers import (save_file, build_app, run_docker_image, 
                         get_image, get_container)
 
@@ -93,37 +92,6 @@ async def git_clone(git_url: str, folder_name: str):
             "cloned": git_url,
             "location": folder_name
         }
-
-@service_router.post("/service/app/{app_id}/upload")
-async def app_files(app_id: str, file: UploadFile):
-    """
-    Upload the files for an application
-
-    Args:
-        app_id (str): The ID of the application
-        file (UploadFile): The file to upload
-    
-    Returns:
-        dict: The file data
-    """
-    app_data = App.get(app_id)
-
-    if not app_data:
-        return HTTPException(status_code=404, detail="App not found")
-    
-    if not file:
-        return {"message": "No file sent"}
-
-    if file.content_type != "application/zip":
-        return {"message": "File is not a zip file"}
-
-    contents = await file.read()
-    
-    if not await save_file(app_data.name+".zip", APP_FILES_DIR, contents):
-        return {"message": "Failed to save app content"}
-    
-    return {"filename": file.filename, "fileb_content_type": file.content_type}
-
 
 @service_router.post("/services/apps/{app_id}/build")
 async def build_app_(app_id: str, build_data: BuildItem):

@@ -7,6 +7,7 @@ from docker.errors import ImageNotFound, NotFound, BuildError
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from git import Repo
+import json
 
 from . import (APP_CONFIG_FILE, CONFIG_KEYS_X, CONFIG_KEYS, 
                 CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE, DOCKER_CLIENT)
@@ -97,7 +98,19 @@ async def build_app(git_url, app_name):
     return "App built successfully"
 
 async def build_docker_image(app_dir, app_name):
-    return DOCKER_CLIENT.images.build(path=app_dir, tag=app_name, rm=True)
+    image, logs = DOCKER_CLIENT.images.build(path=app_dir, tag=app_name, rm=True)
+    
+    for line in logs:
+        if "stream" in line:
+            line_str = line["stream"].strip()
+            if line_str.startswith("Step ") or line_str.startswith("--->"):
+                continue
+            if line_str.strip():
+                print(line_str)
+    else:
+        print("Docker image build complete.")
+    
+    return image, logs
 
 def get_image(app_name):
     try:
