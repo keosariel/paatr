@@ -26,6 +26,9 @@ class AppItem(BaseModel):
     user_id: str
     description: Union[str, None] = None
 
+class BuildItem(BaseModel):
+    username: str
+    gh_token: str
 
 @service_router.get("/")
 async def hello():
@@ -68,7 +71,30 @@ async def register_app(app_id: str):
     
     return data.to_dict()
 
-@service_router.post("/services/apps/{app_id}/upload")
+@service_router.get("/repo_cloning/{git_url}")
+async def git_clone(git_url: str, folder_name: str):
+    """
+        Upload the files for an application
+        Args:
+            git_url (str): The URL of the GitHub repository to be cloned
+            folder_name (str): The name of the folder where the repo will be cloned
+
+        Returns:
+            JSONResponse
+        """
+    if not git_url:
+        return HTTPException(status_code=409, detail="Missing Repository link to clone")
+    if not folder_name:
+        return HTTPException(status_code=409, detail="Folder name missing")
+    if not await repo_clone(git_url, folder_name):
+        return {"message": "Failed to clone Repo"}
+    
+    return {
+            "cloned": git_url,
+            "location": folder_name
+        }
+
+@service_router.post("/service/app/{app_id}/upload")
 async def app_files(app_id: str, file: UploadFile):
     """
     Upload the files for an application
@@ -100,15 +126,17 @@ async def app_files(app_id: str, file: UploadFile):
 
 
 @service_router.post("/services/apps/{app_id}/build")
-async def build_app_(app_id: str):
+async def build_app_(app_id: str, build_data: BuildItem):
     app_data = App.get(app_id)
     
     if not app_data:
         return HTTPException(status_code=404, detail="App not found")
     
-    app_path = os.path.join(APP_FILES_DIR, app_data.name+".zip")
-    
-    return {"message": await build_app(app_path, app_data.name)}
+    repo = app_data.repo
+    # github_url = repo["git_url"].replace("git://", f"https://{build_data.username}:{build_data.gh_token}@")
+    github_url = repo["git_url"].replace("git://", f"https://")
+
+    return {"message": await build_app(github_url, app_data.name)}
 
 
 @service_router.post("/services/apps/{app_id}/run")

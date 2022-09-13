@@ -27,9 +27,9 @@ CONFIG_VALUE_VALIDATOR = {
 }
 
 DOCKER_TEMPLATE = """
-FROM python:3.9.14-alpine3.16
+FROM python:3.9-alpine3.15
 WORKDIR /app
-COPY . .
+COPY ./{app_name} .
 {run}
 EXPOSE {port}
 CMD {start}
