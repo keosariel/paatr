@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .endpoints import auth_router, service_router
+from .endpoints import service_router
 from .helpers import handle_errors
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,8 +17,6 @@ def create_app():
     )
 
     # Register the routers
-    app.include_router(auth_router)
     app.include_router(service_router)
-
     app.exception_handler(Exception)(handle_errors)
     return app

@@ -1,13 +1,20 @@
 import os
+import logging
 
 import docker
 from dotenv import dotenv_values
 from supabase import create_client, Client
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-APP_FILES_DIR = os.path.join(BASE_DIR, "__logs__")
+
+LOG_CONFIG_FILE = os.path.join(BASE_DIR, "paatr/logging.conf")
+APP_FILES_DIR = os.path.join(BASE_DIR, "__apps__")
 APP_FILES_DIR = os.path.join(APP_FILES_DIR, "apps")
 APP_CONFIG_FILE = "paatr.yaml"
+
+LOGS_DIR = os.path.join(BASE_DIR, "__logs__")
+LOGS_FILE = os.path.join(LOGS_DIR, "paatr.log")
+LOGS_LEVEL = "DEBUG"
 
 ENV = dotenv_values(".env")  # take environment variables from .env.
 supabase: Client = create_client(ENV['SUPABASE_URL'], ENV['SUPABASE_KEY'])
@@ -36,3 +43,17 @@ CMD {start}
 """
 
 DOCKER_CLIENT = docker.from_env()
+# setup loggers
+logging.config.fileConfig(LOG_CONFIG_FILE, disable_existing_loggers=False)
+
+# get root logger
+logger = logging.getLogger(__name__)  
+
+class AppLogs:
+    def __init__(self):
+        self.logs = {}
+    
+    def add(self, app_name, logs_str):
+        self.logs[app_name] = logs_str.split("\n")
+
+ALL_APPS_LOGS_CACHE = AppLogs()

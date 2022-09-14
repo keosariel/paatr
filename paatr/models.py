@@ -12,7 +12,7 @@ class App:
     table = "paatr-app"
 
     def __init__(self, user_id, name, description, created_at=None, 
-                    updated_at=None, deleted=False, app_id=None, repo={}, **kwargs):
+                    updated_at=None, deleted=False, app_id=None, repo={}, id=None, **kwargs):
         """
         Creates a new App object.
 
@@ -49,6 +49,7 @@ class App:
         self.updated_at = updated_at or datetime.now().isoformat()
         self.deleted = deleted
         self.repo = repo 
+        self.id = id
 
     @classmethod
     def get_all(cls):
@@ -110,7 +111,8 @@ class App:
             "description": self.description,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
-            "deleted": self.deleted
+            "deleted": self.deleted,
+            "id": self.id
         }
 
     @classmethod
