@@ -12,7 +12,7 @@ class App:
     table = "paatr-app"
 
     def __init__(self, user_id, name, description, created_at=None, 
-                    updated_at=None, deleted=False, app_id=None, **kwargs):
+                    updated_at=None, deleted=False, app_id=None, repo={}, **kwargs):
         """
         Creates a new App object.
 
@@ -23,6 +23,7 @@ class App:
             created_at (datetime): The date the app was created.
             updated_at (datetime): The date the app was last updated.
             app_id (str): The app's ID.
+            repo (dict): The app's repository data.
         
         Raises:
             ValueError: If the name is invalid. 
@@ -47,6 +48,7 @@ class App:
         self.created_at = created_at or datetime.now().isoformat()
         self.updated_at = updated_at or datetime.now().isoformat()
         self.deleted = deleted
+        self.repo = repo 
 
     @classmethod
     def get_all(cls):

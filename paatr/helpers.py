@@ -3,7 +3,7 @@ import tempfile
 import zipfile
 import yaml
 
-from docker.errors import ImageNotFound, NotFound
+from docker.errors import ImageNotFound, NotFound, BuildError
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from git import Repo
@@ -16,18 +16,6 @@ async def handle_errors(request: Request, exc: Exception):
         status_code=500,
         content={"message": str(exc)},
     )
-
-async def repo_clone(git_url: str, repo_dir: str) -> bool:
-    if not os.path.exists(repo_dir):
-        os.mkdir(repo_dir)
-    try:
-        os.chdir(repo_dir)
-        rep = os.getcwd()
-        Repo.clone_from(url=git_url, to_path=rep)
-    except Exception as exc:
-        return False
-    return True
-
 
 async def save_file(filename, dir_path, contents, _mode="wb"):
     if not os.path.exists(dir_path):
@@ -70,35 +58,40 @@ def generate_docker_config(config):
     if type(run) == list:
         run = " && ".join(run)
 
-    return DOCKER_TEMPLATE.format(**config, run=f"RUN {run}")
+    return DOCKER_TEMPLATE.format(**config, run=f"RUN {run}", app_name=config["name"])
 
-async def build_app(app_path, app_name):
-    if not os.path.exists(app_path):
-        return "No files found for this app"
-    
+async def build_app(git_url, app_name):
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
-            with zipfile.ZipFile(app_path, "r") as zip_ref:
-                zip_ref.extractall(tmp_dir)
+            app_dir = os.path.join(tmp_dir, app_name)
+            print(git_url)
+            repo = Repo.clone_from(url=git_url, to_path=app_dir)
 
-                files = os.listdir(tmp_dir)
-                
-                if APP_CONFIG_FILE not in files:
-                    return f"No {APP_CONFIG_FILE} file found in the app files"
+            files = os.listdir(app_dir)
+            print(files)
+            if APP_CONFIG_FILE not in files:
+                return f"No {APP_CONFIG_FILE} file found in the app files"
 
-                (is_valid, config) = await get_app_config(os.path.join(tmp_dir, APP_CONFIG_FILE))
+            (is_valid, config) = await get_app_config(os.path.join(app_dir, APP_CONFIG_FILE))
 
-                if not is_valid:
-                    return config
-                
-                dockerfile = generate_docker_config(config)
+            if not is_valid:
+                return config
+            config["name"] = app_name
+            dockerfile = generate_docker_config(config)
 
-                with open(os.path.join(tmp_dir, "dockerfile"), "w") as fp:
-                    fp.write(dockerfile)
-                
-                image, _ = await build_docker_image(tmp_dir, app_name)
+            with open(os.path.join(tmp_dir, "dockerfile"), "w") as fp:
+                fp.write(dockerfile)
 
+            image, _ = await build_docker_image(tmp_dir, app_name)
+
+    except BuildError as e:
+        print("Hey something went wrong with image build!")
+        for line in e.build_log:
+            if 'stream' in line:
+                print(line['stream'].strip())
+        
     except Exception as e:
+        raise e
         return "Failed to build app"
     
     return "App built successfully"
