@@ -1,6 +1,5 @@
 import os
 import tempfile
-import zipfile
 import yaml
 
 from docker.errors import ImageNotFound, NotFound, BuildError
@@ -9,7 +8,7 @@ from fastapi.responses import JSONResponse
 from git import Repo
 
 from . import (APP_CONFIG_FILE, CONFIG_KEYS_X, CONFIG_KEYS, 
-                CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE, DOCKER_CLIENT)
+                CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE, DOCKER_CLIENT, ALL_APPS_LOGS_CACHE)
 
 async def handle_errors(request: Request, exc: Exception):
     return JSONResponse(
@@ -30,6 +29,16 @@ async def save_file(filename, dir_path, contents, _mode="wb"):
     return True
 
 async def get_app_config(config_path):
+    """
+    Creates a config dict from the app `paatr.yaml` config file
+
+    Args:
+        config_path (str): Path to the app `paatr.yaml` config file
+    
+    Returns:
+        (bool, dict): Tuple of (success, config)
+    """
+
     with open(config_path, "r") as fp:
         config = yaml.safe_load(fp)
     
@@ -61,14 +70,24 @@ def generate_docker_config(config):
     return DOCKER_TEMPLATE.format(**config, run=f"RUN {run}", app_name=config["name"])
 
 async def build_app(git_url, app_name):
+    """
+    Builds an app from a git repository and generates 
+    a docker config file from the app `paatr.yaml` config file
+
+    Args:
+        git_url (str): URL of the git repository
+        app_name (str): Name of the app
+    
+    Returns:
+        str: Build message
+    """
+
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
             app_dir = os.path.join(tmp_dir, app_name)
-            print(git_url)
             repo = Repo.clone_from(url=git_url, to_path=app_dir)
 
             files = os.listdir(app_dir)
-            print(files)
             if APP_CONFIG_FILE not in files:
                 return f"No {APP_CONFIG_FILE} file found in the app files"
 
@@ -84,20 +103,65 @@ async def build_app(git_url, app_name):
 
             image, _ = await build_docker_image(tmp_dir, app_name)
 
+        return "App built successfully"
+
     except BuildError as e:
-        print("Hey something went wrong with image build!")
         for line in e.build_log:
             if 'stream' in line:
                 print(line['stream'].strip())
-        
-    except Exception as e:
-        raise e
-        return "Failed to build app"
     
-    return "App built successfully"
+    return "Failed to build app"
+
+###################################################################
+# Docker related functions                                       #
+###################################################################
 
 async def build_docker_image(app_dir, app_name):
-    return DOCKER_CLIENT.images.build(path=app_dir, tag=app_name, rm=True)
+    """
+    Build docker image from app directory
+
+    Args:
+        app_dir (str): Path to app directory
+        app_name (str): Name of the app
+    
+    Returns:
+        (docker.models.images.Image, str): Docker image object and build logs
+    """
+    image, logs = DOCKER_CLIENT.images.build(path=app_dir, tag=app_name, rm=True)
+    lines = []
+    for line in logs:
+        if "stream" in line:
+            line_str = line["stream"].strip()
+            if line_str.startswith("Step ") or line_str.startswith("--->"):
+                continue
+            if line_str.strip():
+                print(line_str)
+                lines.append(line_str)
+    else:
+        ALL_APPS_LOGS_CACHE[app_name] = lines
+    
+    return image, logs
+
+def get_app_status(app_name):
+    """
+    Get status of container with app_name
+
+    Args:
+        app_name (str): Name of the app
+    
+    Returns:
+        dict: Status of the app
+    """
+
+    if not get_image(app_name):
+        return {"message": "App has not been built", "status": "not-built"}
+
+    container = get_container(app_name)
+    if container:
+        if container.status == "running":
+             return {"message": "App is running", "status": "running"}
+
+    return {"message": "App is not running", "status": "not-running"}
 
 def get_image(app_name):
     try:
@@ -119,7 +183,15 @@ def remove_container(app_name):
     if cont := get_container(app_name):
         cont.remove(force=True)
 
-async def run_docker_image(app_name):
+async def run_docker_image(app_name, app_id_digit):
+    """
+    Runs docker image with app_name
+
+    Args:
+        app_name (str): Name of the app
+        app_id_digit (int): Digit to be used to generate a unique port for the app
+    """
+
     if not get_image(app_name):
         return "App not found"
         
@@ -129,6 +201,5 @@ async def run_docker_image(app_name):
         cont.start()
     else:
         (DOCKER_CLIENT.containers
-                    .run(app_name, ports={'5000/tcp': 5000}, 
-                            detach=True, name=app_name)
-        )
+                    .run(app_name, ports={'5000/tcp': 10000 + app_id_digit}, 
+                            detach=True, name=app_name))
