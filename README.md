@@ -7,6 +7,6 @@ Paatr basically help developer speed up developement by letting them focus of bu
 - [x] Secure api with github auth synced with frontend
 - [ ] Provide diverse python environments
 - [ ] Seamlessly integrate python webapps i.e flasks, fastApi, django.
-- [ ] Stream and store (build) logs (sockets)
-- [ ] Run, restart and stop applications (containers) asynchronously (works with background tasks)
+- [x] Stream and store (build) logs (~sockets~, https)
+- [x] Run, restart and stop applications (containers) asynchronously (works with background tasks)
 - [x] Implement configuration syntax
