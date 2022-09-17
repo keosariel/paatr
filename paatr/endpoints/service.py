@@ -1,13 +1,15 @@
+from datetime import datetime
 import os
+import uuid
 from typing import Union
 
-from fastapi import APIRouter, HTTPException, WebSocket
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
 from ..models import App
 from ..helpers import (get_app_status, build_app, run_docker_image, 
-                        get_image)
-from .. import logger, ALL_APPS_LOGS_CACHE
+                        get_image, stop_container)
+from .. import logger, BUILD_LOGS_TABLE, NEW_DB_CONN
 
 
 service_router = APIRouter()
@@ -47,7 +49,7 @@ async def get_app_data(app_id: str):
     return data.to_dict()
 
 @service_router.post("/services/apps/{app_id}/build")
-async def build_app_(app_id: str, build_data: BuildItem):
+async def build_app_(app_id: str, build_data: BuildItem, background_tasks: BackgroundTasks):
     """
     Build an application
 
@@ -69,10 +71,9 @@ async def build_app_(app_id: str, build_data: BuildItem):
     # github_url = repo["git_url"].replace("git://", f"https://{build_data.username}:{build_data.gh_token}@")
     github_url = repo["git_url"].replace("git://", f"https://")
 
-    # TODO: Run this in the background
-    await build_app(github_url, app_data.name)
-
-    return get_app_status(app_data.name)
+    build_id = str(uuid.uuid4())
+    background_tasks.add_task(build_app, build_id, github_url, app_data.name, app_data.app_id)
+    return {"build_id": build_id}
 
 
 @service_router.post("/services/apps/{app_id}/run")
@@ -101,11 +102,50 @@ async def run_app(app_id: str):
 
     return get_app_status(app_data.name)
 
-@service_router.get("/services/apps/{app_id}/status")
-async def app_status(app_id: str):
+
+@service_router.post("/services/apps/{app_id}/stop")
+async def stop_app(app_id: str):
+    """
+    Stop an application
+
+    Args:
+        app_id (str): The ID of the application
+
+    Returns:
+        dict: The application data
+    """
+    logger.info("Stopping app %s", app_id)
+
     app_data = App.get(app_id)
     
     if not app_data:
         return HTTPException(status_code=404, detail="App not found")
 
+    if not get_image(app_data.name):
+        return {"message": "App has not been built"}
+    
+    # TODO: Run this in the background
+    await stop_container(app_data.name)
+
     return get_app_status(app_data.name)
+
+@service_router.get("/services/apps/{app_id}/status")
+async def app_status(app_id: str, build_id: str = "", all: str = "false"):
+    app_data = App.get(app_id)
+    
+    if not app_data:
+        return HTTPException(status_code=404, detail="App not found")
+
+    data = get_app_status(app_data.name)
+    app_data = NEW_DB_CONN().get(app_id, {})
+
+    if all == "true":
+        builds = list(app_data.values())
+        builds.sort(key=lambda x: datetime.fromisoformat(x["created_at"]), reverse=True)
+        data["builds"] = builds[:5]
+
+    elif build_id.strip():
+        data["build"] = app_data.get(build_id, {})
+    
+
+    return data

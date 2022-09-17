@@ -1,25 +1,30 @@
-import os
 import logging
 
 import docker
 from dotenv import dotenv_values
-from supabase import create_client, Client
+from sqlitedict import SqliteDict
+from supabase import create_client
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from .config import Config
 
-LOG_CONFIG_FILE = os.path.join(BASE_DIR, "paatr/logging.conf")
-APP_FILES_DIR = os.path.join(BASE_DIR, "__apps__")
-APP_FILES_DIR = os.path.join(APP_FILES_DIR, "apps")
+ENV = dotenv_values(".env")  # Load environment variables
+
+# Supabase setup
+supabase = create_client(ENV['SUPABASE_URL'], ENV['SUPABASE_KEY'])
+
+# setup loggers
+logging.config.fileConfig(Config.LOG_CONFIG_FILE, disable_existing_loggers=False)
+logger = logging.getLogger(__name__)  
+
+BUILD_LOGS_TABLE = SqliteDict(Config.APPS_LOGS, tablename="build_logs", autocommit=True)
+NEW_DB_CONN = lambda: SqliteDict(Config.APPS_LOGS, tablename="build_logs", autocommit=True)
+
+# Docker setup
+DOCKER_CLIENT = docker.from_env()
+
 APP_CONFIG_FILE = "paatr.yaml"
 
-LOGS_DIR = os.path.join(BASE_DIR, "__logs__")
-LOGS_FILE = os.path.join(LOGS_DIR, "paatr.log")
-LOGS_LEVEL = "DEBUG"
-
-ENV = dotenv_values(".env")  # take environment variables from .env.
-supabase: Client = create_client(ENV['SUPABASE_URL'], ENV['SUPABASE_KEY'])
-
-# TODO: Add python versions
+# Add python versions
 PYTHON_VERSION_DOCKER_MAPS = {}
 
 CONFIG_KEYS_X = ["runtime", "run", "port", "start"]
@@ -41,19 +46,3 @@ COPY ./{app_name} .
 EXPOSE {port}
 CMD {start}
 """
-
-DOCKER_CLIENT = docker.from_env()
-# setup loggers
-logging.config.fileConfig(LOG_CONFIG_FILE, disable_existing_loggers=False)
-
-# get root logger
-logger = logging.getLogger(__name__)  
-
-class AppLogs:
-    def __init__(self):
-        self.logs = {}
-    
-    def add(self, app_name, logs_str):
-        self.logs[app_name] = logs_str.split("\n")
-
-ALL_APPS_LOGS_CACHE = AppLogs()

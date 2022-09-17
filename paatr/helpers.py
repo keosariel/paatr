@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 import tempfile
 import yaml
 
@@ -8,7 +9,8 @@ from fastapi.responses import JSONResponse
 from git import Repo
 
 from . import (APP_CONFIG_FILE, CONFIG_KEYS_X, CONFIG_KEYS, 
-                CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE, DOCKER_CLIENT, ALL_APPS_LOGS_CACHE)
+                CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE, DOCKER_CLIENT, 
+                BUILD_LOGS_TABLE)
 
 async def handle_errors(request: Request, exc: Exception):
     return JSONResponse(
@@ -28,7 +30,7 @@ async def save_file(filename, dir_path, contents, _mode="wb"):
     
     return True
 
-async def get_app_config(config_path):
+def get_app_config(config_path):
     """
     Creates a config dict from the app `paatr.yaml` config file
 
@@ -69,7 +71,28 @@ def generate_docker_config(config):
 
     return DOCKER_TEMPLATE.format(**config, run=f"RUN {run}", app_name=config["name"])
 
-async def build_app(git_url, app_name):
+
+def _add_build_log(build_id, app_id, log, state="building"):
+    with BUILD_LOGS_TABLE as logs_db:
+        app_data = logs_db.get(app_id, dict())
+        build_data = app_data.get(build_id, dict())
+        app_logs = build_data.get("logs", [])
+        app_logs.append(log)
+
+        if "created_at" not in build_data:
+            build_data["created_at"] = datetime.utcnow().isoformat()
+            
+        BUILD_LOGS_TABLE[app_id] = {
+            **app_data,
+            build_id: {
+                **build_data,
+                "logs": app_logs,
+                "status": state,
+                "build_id": build_id
+            }
+        }
+
+def build_app(build_id, git_url, app_name, app_id):
     """
     Builds an app from a git repository and generates 
     a docker config file from the app `paatr.yaml` config file
@@ -89,34 +112,41 @@ async def build_app(git_url, app_name):
 
             files = os.listdir(app_dir)
             if APP_CONFIG_FILE not in files:
-                return f"No {APP_CONFIG_FILE} file found in the app files"
+                _add_build_log(build_id, app_id, f"Missing {APP_CONFIG_FILE} file", "failed")
+                return
 
-            (is_valid, config) = await get_app_config(os.path.join(app_dir, APP_CONFIG_FILE))
+            (is_valid, config) = get_app_config(os.path.join(app_dir, APP_CONFIG_FILE))
 
             if not is_valid:
-                return config
+                _add_build_log(build_id, app_id, config, "failed")
+                return
+            else:
+                _add_build_log(build_id, app_id, "Successfully parsed config file")
+
             config["name"] = app_name
             dockerfile = generate_docker_config(config)
 
             with open(os.path.join(tmp_dir, "dockerfile"), "w") as fp:
                 fp.write(dockerfile)
 
-            image, _ = await build_docker_image(tmp_dir, app_name)
+            image, _ = build_docker_image(build_id, tmp_dir, app_name, app_id)
 
-        return "App built successfully"
+        _add_build_log(build_id, app_id, "Successfully built image", "success")
+        return 
 
     except BuildError as e:
         for line in e.build_log:
             if 'stream' in line:
-                print(line['stream'].strip())
+                _add_build_log(build_id, app_id, line['stream'].strip(), "failed")
     
+    _add_build_log(build_id, app_id, "Failed to build image", "failed")
     return "Failed to build app"
 
 ###################################################################
 # Docker related functions                                       #
 ###################################################################
 
-async def build_docker_image(app_dir, app_name):
+def build_docker_image(build_id, app_dir, app_name, app_id=""):
     """
     Build docker image from app directory
 
@@ -128,17 +158,14 @@ async def build_docker_image(app_dir, app_name):
         (docker.models.images.Image, str): Docker image object and build logs
     """
     image, logs = DOCKER_CLIENT.images.build(path=app_dir, tag=app_name, rm=True)
-    lines = []
+
     for line in logs:
         if "stream" in line:
             line_str = line["stream"].strip()
             if line_str.startswith("Step ") or line_str.startswith("--->"):
                 continue
             if line_str.strip():
-                print(line_str)
-                lines.append(line_str)
-    else:
-        ALL_APPS_LOGS_CACHE[app_name] = lines
+                _add_build_log(build_id, app_id, line_str)
     
     return image, logs
 
@@ -175,7 +202,7 @@ def get_container(app_name):
     except NotFound:
         return None
 
-def stop_container(app_name):
+async def stop_container(app_name):
     if cont := get_container(app_name):
         cont.stop()
 
@@ -195,7 +222,7 @@ async def run_docker_image(app_name, app_id_digit):
     if not get_image(app_name):
         return "App not found"
         
-    stop_container(app_name)
+    await stop_container(app_name)
 
     if cont := get_container(app_name):
         cont.start()
