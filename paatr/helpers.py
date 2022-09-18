@@ -1,3 +1,4 @@
+from asyncio.log import logger
 import os
 from datetime import datetime
 import tempfile
@@ -10,7 +11,7 @@ from git import Repo
 
 from . import (APP_CONFIG_FILE, CONFIG_KEYS_X, CONFIG_KEYS, 
                 CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE, DOCKER_CLIENT, 
-                BUILD_LOGS_TABLE)
+                BUILD_LOGS_TABLE, Config)
 
 async def handle_errors(request: Request, exc: Exception):
     return JSONResponse(
@@ -72,7 +73,7 @@ def generate_docker_config(config):
     return DOCKER_TEMPLATE.format(**config, run=f"RUN {run}", app_name=config["name"])
 
 
-def _add_build_log(build_id, app_id, log, state="building"):
+def _add_build_log(build_id, app_id, log, state="building", log_type="build"):
     with BUILD_LOGS_TABLE as logs_db:
         app_data = logs_db.get(app_id, dict())
         build_data = app_data.get(build_id, dict())
@@ -88,7 +89,8 @@ def _add_build_log(build_id, app_id, log, state="building"):
                 **build_data,
                 "logs": app_logs,
                 "status": state,
-                "build_id": build_id
+                "build_id": build_id,
+                "type": log_type
             }
         }
 
@@ -202,7 +204,7 @@ def get_container(app_name):
     except NotFound:
         return None
 
-async def stop_container(app_name):
+def stop_container(app_name):
     if cont := get_container(app_name):
         cont.stop()
 
@@ -210,7 +212,7 @@ def remove_container(app_name):
     if cont := get_container(app_name):
         cont.remove(force=True)
 
-async def run_docker_image(app_name, app_id_digit):
+def run_docker_image(app_name, app_id_digit):
     """
     Runs docker image with app_name
 
@@ -222,11 +224,72 @@ async def run_docker_image(app_name, app_id_digit):
     if not get_image(app_name):
         return "App not found"
         
-    await stop_container(app_name)
+    stop_container(app_name)
 
     if cont := get_container(app_name):
         cont.start()
     else:
-        (DOCKER_CLIENT.containers
+        app_dir = os.path.join(Config.APP_FILES_DIR, app_name)
+
+        if not os.path.exists(app_dir):
+            os.mkdir(app_dir)
+        
+        container = (DOCKER_CLIENT.containers
                     .run(app_name, ports={'5000/tcp': 10000 + app_id_digit}, 
-                            detach=True, name=app_name))
+                            detach=True, name=app_name, volumes={app_dir: {'bind': '/paatr', 'mode': 'rw'}}))
+
+def container_logs(app_name):
+    if cont := get_container(app_name):
+        if not cont:
+            return None
+    
+    app_dir = os.path.join(Config.APP_FILES_DIR, app_name)
+    app_logs = os.path.join(app_dir, "logs.txt")
+
+    if os.path.exists(app_logs):
+        tail_lines = tail(open(app_logs, 'r'), 100)
+        return tail_lines
+
+    return None
+
+def tail(f, lines=1, _buffer=4098):
+    """Tail a file and get X lines from the end
+    
+    Args:
+        f (file): File object
+        lines (int, optional): Number of lines to return. Defaults to 1.
+        _buffer (int, optional): Buffer size. Defaults to 4098.
+    
+    Returns:
+        str: Last X lines of the file
+    
+    Resource: https://stackoverflow.com/a/13790289/10527467
+    """
+    # place holder for the lines found
+    lines_found = []
+
+    # block counter will be multiplied by buffer
+    # to get the block size from the end
+    block_counter = -1
+
+    # loop until we find X lines
+    while len(lines_found) < lines:
+        try:
+            f.seek(block_counter * _buffer, os.SEEK_END)
+        except IOError:  # either file is too small, or too many lines requested
+            f.seek(0)
+            lines_found = f.readlines()
+            break
+
+        lines_found = f.readlines()
+
+        # we found enough lines, get out
+        # Removed this line because it was redundant the while will catch
+        # it, I left it for history
+        # if len(lines_found) > lines:
+        #    break
+
+        # decrement the block counter to get the
+        # next X bytes
+        block_counter -= 1
+    return lines_found[-lines:]

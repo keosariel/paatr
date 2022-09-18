@@ -1,4 +1,5 @@
 import logging
+import os
 
 import docker
 from dotenv import dotenv_values
@@ -11,6 +12,10 @@ ENV = dotenv_values(".env")  # Load environment variables
 
 # Supabase setup
 supabase = create_client(ENV['SUPABASE_URL'], ENV['SUPABASE_KEY'])
+
+for dir in [Config.APP_FILES_DIR, Config.LOGS_DIR]:
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
 # setup loggers
 logging.config.fileConfig(Config.LOG_CONFIG_FILE, disable_existing_loggers=False)
@@ -44,5 +49,5 @@ WORKDIR /app
 COPY ./{app_name} .
 {run}
 EXPOSE {port}
-CMD {start}
+CMD {start} > /paatr/logs.txt 2>&1
 """
