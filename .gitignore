@@ -129,4 +129,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-__apps_data__/
+__apps__/
+__logs__/

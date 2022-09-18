@@ -1,0 +1,24 @@
+2022-09-18 14:31:36,588 loglevel=INFO   logger=sqlitedict __init__() L159  opening Sqlite table 'build_logs' in '/Users/mac/Desktop/spotlyt-cloud/backend/__logs__/paatr-apps.log'
+2022-09-18 14:31:37,188 loglevel=INFO   logger=uvicorn.error serve() L75   Started server process [40606]
+2022-09-18 14:31:37,189 loglevel=INFO   logger=uvicorn.error startup() L47   Waiting for application startup.
+2022-09-18 14:31:37,190 loglevel=INFO   logger=uvicorn.error startup() L61   Application startup complete.
+2022-09-18 14:31:45,643 loglevel=INFO   logger=sqlitedict __init__() L159  opening Sqlite table 'build_logs' in '/Users/mac/Desktop/spotlyt-cloud/backend/__logs__/paatr-apps.log'
+INFO:     127.0.0.1:60257 - "GET /services/apps/aeba0b7a-b613-43f7-87f8-4ea064cedb9e/status HTTP/1.1" 200 OK
+2022-09-18 14:31:48,081 loglevel=INFO   logger=sqlitedict __init__() L159  opening Sqlite table 'build_logs' in '/Users/mac/Desktop/spotlyt-cloud/backend/__logs__/paatr-apps.log'
+INFO:     127.0.0.1:60258 - "GET /services/apps/aeba0b7a-b613-43f7-87f8-4ea064cedb9e/status?all=true HTTP/1.1" 200 OK
+2022-09-18 14:31:48,922 loglevel=INFO   logger=sqlitedict __init__() L159  opening Sqlite table 'build_logs' in '/Users/mac/Desktop/spotlyt-cloud/backend/__logs__/paatr-apps.log'
+INFO:     127.0.0.1:60257 - "GET /services/apps/aeba0b7a-b613-43f7-87f8-4ea064cedb9e/status HTTP/1.1" 200 OK
+2022-09-18 14:31:49,521 loglevel=INFO   logger=sqlitedict __init__() L159  opening Sqlite table 'build_logs' in '/Users/mac/Desktop/spotlyt-cloud/backend/__logs__/paatr-apps.log'
+INFO:     127.0.0.1:60260 - "GET /services/apps/aeba0b7a-b613-43f7-87f8-4ea064cedb9e/status?all=true HTTP/1.1" 200 OK
+2022-09-18 14:32:01,584 loglevel=INFO   logger=sqlitedict __init__() L159  opening Sqlite table 'build_logs' in '/Users/mac/Desktop/spotlyt-cloud/backend/__logs__/paatr-apps.log'
+INFO:     127.0.0.1:60267 - "GET /services/apps/aeba0b7a-b613-43f7-87f8-4ea064cedb9e/status HTTP/1.1" 200 OK
+2022-09-18 14:32:02,142 loglevel=INFO   logger=sqlitedict __init__() L159  opening Sqlite table 'build_logs' in '/Users/mac/Desktop/spotlyt-cloud/backend/__logs__/paatr-apps.log'
+INFO:     127.0.0.1:60268 - "GET /services/apps/aeba0b7a-b613-43f7-87f8-4ea064cedb9e/status?all=true HTTP/1.1" 200 OK
+2022-09-18 14:32:02,813 loglevel=INFO   logger=sqlitedict __init__() L159  opening Sqlite table 'build_logs' in '/Users/mac/Desktop/spotlyt-cloud/backend/__logs__/paatr-apps.log'
+INFO:     127.0.0.1:60267 - "GET /services/apps/aeba0b7a-b613-43f7-87f8-4ea064cedb9e/status HTTP/1.1" 200 OK
+2022-09-18 14:32:03,479 loglevel=INFO   logger=sqlitedict __init__() L159  opening Sqlite table 'build_logs' in '/Users/mac/Desktop/spotlyt-cloud/backend/__logs__/paatr-apps.log'
+INFO:     127.0.0.1:60270 - "GET /services/apps/aeba0b7a-b613-43f7-87f8-4ea064cedb9e/status?all=true HTTP/1.1" 200 OK
+2022-09-18 14:32:11,443 loglevel=INFO   logger=uvicorn.error shutdown() L253  Shutting down
+2022-09-18 14:32:11,543 loglevel=INFO   logger=uvicorn.error shutdown() L66   Waiting for application shutdown.
+2022-09-18 14:32:11,547 loglevel=INFO   logger=uvicorn.error shutdown() L77   Application shutdown complete.
+2022-09-18 14:32:11,547 loglevel=INFO   logger=uvicorn.error serve() L85   Finished server process [40606]

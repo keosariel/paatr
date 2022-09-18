@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from ..models import App
 from ..helpers import (get_app_status, build_app, run_docker_image, 
-                        get_image, stop_container)
+                        get_image, stop_container, container_logs)
 from .. import logger, BUILD_LOGS_TABLE, NEW_DB_CONN
 
 
@@ -77,7 +77,7 @@ async def build_app_(app_id: str, build_data: BuildItem, background_tasks: Backg
 
 
 @service_router.post("/services/apps/{app_id}/run")
-async def run_app(app_id: str):
+async def run_app(app_id: str, background_tasks: BackgroundTasks):
     """
     Run an application
 
@@ -97,14 +97,13 @@ async def run_app(app_id: str):
     if not get_image(app_data.name):
         return {"message": "App has not been built"}
     
-    # TODO: Run this in the background
-    await run_docker_image(app_data.name, app_data.id)
+    background_tasks.add_task(run_docker_image, app_data.name, app_data.id)
 
     return get_app_status(app_data.name)
 
 
 @service_router.post("/services/apps/{app_id}/stop")
-async def stop_app(app_id: str):
+async def stop_app(app_id: str, background_tasks: BackgroundTasks):
     """
     Stop an application
 
@@ -124,26 +123,32 @@ async def stop_app(app_id: str):
     if not get_image(app_data.name):
         return {"message": "App has not been built"}
     
-    # TODO: Run this in the background
-    await stop_container(app_data.name)
+    background_tasks.add_task(stop_container, app_data.name)
 
     return get_app_status(app_data.name)
 
 @service_router.get("/services/apps/{app_id}/status")
-async def app_status(app_id: str, build_id: str = "", all: str = "false"):
+async def app_status(app_id: str, build_id: str = "", all: str = "false", run: str = "false"):
     app_data = App.get(app_id)
     
     if not app_data:
         return HTTPException(status_code=404, detail="App not found")
 
     data = get_app_status(app_data.name)
+
+    if run == "true":
+        logs = container_logs(app_data.name)
+        if logs is None:
+            return HTTPException(status_code=404, detail="App not running")
+        
+        data["logs"] = logs
+        
     app_data = NEW_DB_CONN().get(app_id, {})
 
     if all == "true":
         builds = list(app_data.values())
         builds.sort(key=lambda x: datetime.fromisoformat(x["created_at"]), reverse=True)
         data["builds"] = builds[:5]
-
     elif build_id.strip():
         data["build"] = app_data.get(build_id, {})
     
