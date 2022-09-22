@@ -97,7 +97,9 @@ async def run_app(app_id: str, background_tasks: BackgroundTasks):
     if not get_image(app_data.name):
         return {"message": "App has not been built"}
     
-    background_tasks.add_task(run_docker_image, app_data.name, app_data.id)
+    run_id = str(uuid.uuid4())
+
+    background_tasks.add_task(run_docker_image, app_data, run_id)
 
     return get_app_status(app_data.name)
 
