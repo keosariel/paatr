@@ -212,31 +212,44 @@ def remove_container(app_name):
     if cont := get_container(app_name):
         cont.remove(force=True)
 
-def run_docker_image(app_name, app_id_digit):
+def run_docker_image(app_data, run_id):
     """
     Runs docker image with app_name
 
     Args:
         app_name (str): Name of the app
         app_id_digit (int): Digit to be used to generate a unique port for the app
+        run_id (str): Unique ID for the run
     """
+    app_name = app_data.name
+    app_id_digit = app_data.id
+    app_id = app_data.app_id
 
     if not get_image(app_name):
+        _add_build_log(run_id, app_id, "App not found", "failed", log_type="run")
         return "App not found"
-        
-    stop_container(app_name)
+    
+    try:
+        stop_container(app_name)
 
-    if cont := get_container(app_name):
-        cont.start()
-    else:
-        app_dir = os.path.join(Config.APP_FILES_DIR, app_name)
+        if cont := get_container(app_name):
+            _add_build_log(run_id, app_id, "Restarting container", "setting-up", log_type="run")
+            cont.start()
+        else:
+            _add_build_log(run_id, app_id, "Building container", "setting-up", log_type="run")
+            app_dir = os.path.join(Config.APP_FILES_DIR, app_name)
 
-        if not os.path.exists(app_dir):
-            os.mkdir(app_dir)
-        
-        container = (DOCKER_CLIENT.containers
-                    .run(app_name, ports={'5000/tcp': 10000 + app_id_digit}, 
-                            detach=True, name=app_name, volumes={app_dir: {'bind': '/paatr', 'mode': 'rw'}}))
+            if not os.path.exists(app_dir):
+                os.mkdir(app_dir)
+            _add_build_log(run_id, app_id, "Setting up logs", "setting-up", log_type="run")
+            container = (DOCKER_CLIENT.containers
+                        .run(app_name, ports={'5000/tcp': 10000 + app_id_digit}, 
+                                detach=True, name=app_name, volumes={app_dir: {'bind': '/paatr', 'mode': 'rw'}}))
+            
+        _add_build_log(run_id, app_id, "Successfully ran container", "success", log_type="run")
+    except Exception as e:
+        _add_build_log(run_id, app_id, "Failed to run container", "failed", log_type="run")
+        return "Failed to run app"
 
 def container_logs(app_name):
     if cont := get_container(app_name):
