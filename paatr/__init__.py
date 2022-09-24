@@ -8,10 +8,8 @@ from supabase import create_client
 
 from .config import Config
 
-ENV = dotenv_values(".env")  # Load environment variables
-
 # Supabase setup
-supabase = create_client(ENV['SUPABASE_URL'], ENV['SUPABASE_KEY'])
+supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
 
 for dir in [Config.APP_FILES_DIR, Config.LOGS_DIR]:
     if not os.path.exists(dir):

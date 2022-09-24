@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from ..models import App
 from ..helpers import (get_app_status, build_app, run_docker_image, 
-                        get_image, stop_container, container_logs)
+                        get_image, stop_container, container_logs, _add_subdomain)
 from .. import logger, BUILD_LOGS_TABLE, NEW_DB_CONN
 
 
@@ -27,6 +27,28 @@ class BuildItem(BaseModel):
 async def hello():
     logger.info("Hello World!")
     return {"hello": "world"}
+
+# @service_router.post("/services/apps/{app_id}/register")
+# async def register_service(app_id: str):
+#     """
+#     Register a service with the given app_id. 
+#     Also adds a subdomain to the app
+
+#     Args:
+#         app_id (str): The ID of the application
+    
+#     Returns:
+#         dict: The application data
+#     """
+#     logger.info("Getting app data for %s", app_id)
+
+#     data = App.get(app_id)
+
+#     if not data:
+#         return HTTPException(status_code=404, detail="App not found")
+    
+#     _add_subdomain(data)
+#     return data.to_dict()
 
 @service_router.get("/services/apps/{app_id}")
 async def get_app_data(app_id: str):
