@@ -368,3 +368,6 @@ server {{
 
         with open(Config.NGINX_ENABLED_PAATR_APPS, "a") as f:
             f.write(config)
+        
+        if Config.MODE == "prod":
+            os.system("sudo systemctl restart nginx")

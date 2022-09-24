@@ -7,6 +7,7 @@ class Config:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     APP_FILES_DIR = os.path.join(BASE_DIR, "__apps__")
     APP_FILES_DIR = os.path.join(APP_FILES_DIR, "apps")
+    MODE = ENV.get("MODE", "dev")
 
     # Logger
     LOG_CONFIG_FILE = os.path.join(BASE_DIR, "paatr/logging.conf")
@@ -20,7 +21,7 @@ class Config:
     SUPABASE_URL = ENV["SUPABASE_URL"]
     SUPABASE_KEY = ENV["SUPABASE_KEY"]
 
-    if ENV.get("MODE") == "development":
+    if ENV.get("MODE") == "dev":
         NGINX_ENABLED_PAATR_APPS = ENV.get("NGINX_ENABLED_PAATR_APPS_DEV")
     else:
         NGINX_ENABLED_PAATR_APPS = ENV.get("NGINX_ENABLED_PAATR_APPS_PROD")
