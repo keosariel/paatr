@@ -4,6 +4,7 @@ import uuid
 from typing import Union
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from ..models import App
@@ -25,8 +26,35 @@ class BuildItem(BaseModel):
 
 @service_router.get("/")
 async def hello():
-    logger.info("Hello World!")
-    return {"hello": "world"}
+    logger.info("Paatr World!")
+    return {"deploy your python wed apps on...": "...paatr!"}
+
+@service_router.get("/unknown", response_class=HTMLResponse)
+async def unknown():
+    content = """
+<pre>
+Unknown app
+===========
+
+This is the default page for an unknown app. 
+
+Look here
+=========
+
+If this is supposed to be your paatr app, please check the logs for more info.
+
+Tips
+====
+
+- Make sure you have a `paatr.yaml` file in the root of your app directory.
+- Make sure you have a `requirements.txt` file in the root of your app 
+  directory, especially if your app depends on it.
+- Make sure you have a `run` script in your `paatr.yaml` file.
+- Make sure you have a listening `port` in your `paatr.yaml` file.
+</pre>
+"""
+    return content
+
 
 # @service_router.post("/services/apps/{app_id}/register")
 # async def register_service(app_id: str):
