@@ -1,4 +1,3 @@
-from asyncio.log import logger
 import os
 from datetime import datetime
 import tempfile
@@ -8,6 +7,9 @@ from docker.errors import ImageNotFound, NotFound, BuildError
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from git import Repo
+from nginxparser_eb import dumps as nginx_dumps
+from nginxparser_eb import load as nginx_load
+from nginxparser_eb import UnspacedList
 
 from . import (APP_CONFIG_FILE, CONFIG_KEYS_X, CONFIG_KEYS, 
                 CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE, DOCKER_CLIENT, 
@@ -145,7 +147,7 @@ def build_app(build_id, git_url, app_name, app_id):
     return "Failed to build app"
 
 ###################################################################
-# Docker related functions                                       #
+# Docker related functions                                        #
 ###################################################################
 
 def build_docker_image(build_id, app_dir, app_name, app_id=""):
@@ -224,6 +226,8 @@ def run_docker_image(app_data, run_id):
     app_name = app_data.name
     app_id_digit = app_data.id
     app_id = app_data.app_id
+
+    _add_subdomain(app_data)
 
     if not get_image(app_name):
         _add_build_log(run_id, app_id, "App not found", "failed", log_type="run")
@@ -306,3 +310,55 @@ def tail(f, lines=1, _buffer=4098):
         # next X bytes
         block_counter -= 1
     return lines_found[-lines:]
+
+
+
+###################################################################
+# Nginx related functions                                         #
+###################################################################
+
+
+def _subdomain_exists(subdomain):
+    try:
+        payload = nginx_load(open(Config.NGINX_ENABLED_PAATR_APPS))
+    except Exception as e:
+        # TODO: Log error
+        return False
+
+    for directive in payload:
+        directive_name, directive_value = directive
+
+        if directive_name[0] == "server":
+            for subdirective in directive_value:
+                subdirective_name, subdirective_value = subdirective
+
+                if subdirective_name == "server_name":
+                    if type(subdirective_value) == str:
+                        if subdirective_value.strip().startswith(subdomain+"."):
+                            return True
+
+    return False
+
+def _add_subdomain(app_data):
+    """
+    Add subdomain to app
+
+    Args:
+        app_data (App): App object
+    """
+    app_name = app_data.name.lower().strip()
+
+    if not _subdomain_exists(app_name):
+        config = f"""
+server {{
+    listen 80;
+    server_name {app_name}.paatrapp.live;
+
+    location / {{
+        proxy_pass http://localhost:{10000 + app_data.id};
+    }}
+}}
+        """
+
+        with open(Config.NGINX_ENABLED_PAATR_APPS, "a") as f:
+            f.write(config)
