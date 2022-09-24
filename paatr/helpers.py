@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+import re
 import tempfile
 import yaml
 
@@ -14,6 +15,8 @@ from nginxparser_eb import UnspacedList
 from . import (APP_CONFIG_FILE, CONFIG_KEYS_X, CONFIG_KEYS, 
                 CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE, DOCKER_CLIENT, 
                 BUILD_LOGS_TABLE, Config)
+
+APP_NAME_REGEX = re.compile(r"^[a-zA-Z]([a-zA-Z0-9_-]{3,20})$")
 
 async def handle_errors(request: Request, exc: Exception):
     return JSONResponse(
@@ -349,6 +352,9 @@ def _add_subdomain(app_data):
     app_name = app_data.name.lower().strip()
 
     if not _subdomain_exists(app_name):
+        if not APP_NAME_REGEX.fullmatch(app_name):
+            return "Invalid app name"
+
         config = f"""
 server {{
     listen 80;
@@ -362,3 +368,6 @@ server {{
 
         with open(Config.NGINX_ENABLED_PAATR_APPS, "a") as f:
             f.write(config)
+        
+        if Config.MODE == "prod":
+            os.system("sudo systemctl restart nginx")
