@@ -26,26 +26,35 @@ NEW_DB_CONN = lambda: SqliteDict(Config.APPS_LOGS, tablename="build_logs", autoc
 DOCKER_CLIENT = docker.from_env()
 
 APP_CONFIG_FILE = "paatr.yaml"
+INSTALLATION_FILE = "requirements.txt"
+DEFAULT_PORT = 80
 
 # Add python versions
 PYTHON_VERSION_DOCKER_MAPS = {}
 
-CONFIG_KEYS_X = ["runtime", "run", "port", "start"]
+CONFIG_KEYS_X = ["runtime", "web"]
 CONFIG_KEYS = CONFIG_KEYS_X + ["env"]
 
 CONFIG_VALUE_VALIDATOR = {
     "runtime": lambda x: type(x) == str,
     "run": lambda x: type(x) == str or type(x) == list,
     "port": lambda x: type(x) == int,
-    "start": lambda x: type(x) == str,
+    "web": lambda x: type(x) == str,
     "env": lambda x: type(x) == dict
 }
 
+PYTHON_RUNTIMES = {
+    "python3.7": "python:3.7-alpine3.15",
+    "python3.8": "python:3.8-alpine3.15",
+    "python3.9": "python:3.9-alpine3.15",
+    "python3.10": "python:3.10-alpine3.15"
+}
+
 DOCKER_TEMPLATE = """
-FROM python:3.9-alpine3.15
+FROM {runtime}
 WORKDIR /app
 COPY ./{app_name} .
 {run}
 EXPOSE {port}
-CMD {start} > /paatr/logs.txt 2>&1
+CMD {web} > /paatr/logs.txt 2>&1
 """

@@ -102,6 +102,10 @@ class App:
         """Updates the app's value."""
         data = supabase.table(self.table).update(value).eq("app_id", app_id).execute()
         return data
+    
+    def delete(self):
+        data = supabase.table(self.table).update({"deleted": True}).eq("app_id", self.app_id).execute()
+        return data
 
     def to_dict(self):
         return {
