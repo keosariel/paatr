@@ -14,7 +14,7 @@ from nginxparser_eb import UnspacedList
 
 from . import (APP_CONFIG_FILE, CONFIG_KEYS_X, CONFIG_KEYS, 
                 CONFIG_VALUE_VALIDATOR, DOCKER_TEMPLATE, DOCKER_CLIENT, 
-                BUILD_LOGS_TABLE, Config)
+                BUILD_LOGS_TABLE, INSTALLATION_FILE, DEFAULT_PORT, PYTHON_RUNTIMES, Config)
 
 APP_NAME_REGEX = re.compile(r"^[a-zA-Z]([a-zA-Z0-9_-]{3,20})$")
 
@@ -51,23 +51,28 @@ def get_app_config(config_path):
         config = yaml.safe_load(fp)
     
     if not config:
-        return False, f"Invalid {APP_CONFIG_FILE} file"
+        return False, f"Invalid `{APP_CONFIG_FILE}` file"
     
     for key in CONFIG_KEYS_X:
         if key not in config:
-            return False, f"Missing {key} key in {APP_CONFIG_FILE}"
+            return False, f"Missing `{key}` key in {APP_CONFIG_FILE}"
 
         if not CONFIG_VALUE_VALIDATOR[key](config[key]):
-            return False, f"Invalid value for {key} key in {APP_CONFIG_FILE}"
+            return False, f"Invalid value for `{key}` key in {APP_CONFIG_FILE}"
 
     for k,v in config.items():
         if k not in CONFIG_KEYS:
-            return False, f"Invalid key {k} in {APP_CONFIG_FILE}"
+            return False, f"Invalid key `{k}` in {APP_CONFIG_FILE}"
         
         if k in CONFIG_KEYS_X:
             if not v:
-                return False, f"Invalid value for {k} in {APP_CONFIG_FILE}"
+                return False, f"Invalid value for `{k}` in {APP_CONFIG_FILE}"
 
+    if config["runtime"] not in PYTHON_RUNTIMES:
+        return False, f"Unknown runtime `{config['runtime']}`"
+
+    config["runtime"] = PYTHON_RUNTIMES[config["runtime"]]
+    config["port"] = DEFAULT_PORT
     return True, config
 
 def generate_docker_config(config):
@@ -99,7 +104,7 @@ def _add_build_log(build_id, app_id, log, state="building", log_type="build"):
             }
         }
 
-def build_app(build_id, git_url, app_name, app_id):
+def build_app(build_id, git_url, app_name, app_id, repo_url):
     """
     Builds an app from a git repository and generates 
     a docker config file from the app `paatr.yaml` config file
@@ -115,12 +120,17 @@ def build_app(build_id, git_url, app_name, app_id):
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
             app_dir = os.path.join(tmp_dir, app_name)
-            repo = Repo.clone_from(url=git_url, to_path=app_dir)
+            _add_build_log(build_id, app_id, f"Cloning {repo_url} ")
+            try:
+                repo = Repo.clone_from(url=git_url, to_path=app_dir)
+            except Exception as e:
+                _add_build_log(build_id, app_id, f"Error cloning {repo_url}", "failed")
+                return f"Error cloning {repo_url}"
 
             files = os.listdir(app_dir)
             if APP_CONFIG_FILE not in files:
                 _add_build_log(build_id, app_id, f"Missing {APP_CONFIG_FILE} file", "failed")
-                return
+                return "Missing paatr.yaml file"
 
             (is_valid, config) = get_app_config(os.path.join(app_dir, APP_CONFIG_FILE))
 
@@ -130,12 +140,18 @@ def build_app(build_id, git_url, app_name, app_id):
             else:
                 _add_build_log(build_id, app_id, "Successfully parsed config file")
 
+            if INSTALLATION_FILE in files:
+                _add_build_log(build_id, app_id, f"Adding installation file `{INSTALLATION_FILE}`")
+                config["run"] = [f"pip install -r {INSTALLATION_FILE}"]
+                _add_build_log(build_id, app_id, "Successfully added installation file")
+
             config["name"] = app_name
             dockerfile = generate_docker_config(config)
 
             with open(os.path.join(tmp_dir, "dockerfile"), "w") as fp:
                 fp.write(dockerfile)
 
+            _add_build_log(build_id, app_id, "Installing dependencies...")
             image, _ = build_docker_image(build_id, tmp_dir, app_name, app_id)
 
         _add_build_log(build_id, app_id, "Successfully built image", "success")
@@ -145,7 +161,7 @@ def build_app(build_id, git_url, app_name, app_id):
         for line in e.build_log:
             if 'stream' in line:
                 _add_build_log(build_id, app_id, line['stream'].strip(), "failed")
-    
+
     _add_build_log(build_id, app_id, "Failed to build image", "failed")
     return "Failed to build app"
 
@@ -250,7 +266,7 @@ def run_docker_image(app_data, run_id):
                 os.mkdir(app_dir)
             _add_build_log(run_id, app_id, "Setting up logs", "setting-up", log_type="run")
             container = (DOCKER_CLIENT.containers
-                        .run(app_name, ports={'5000/tcp': 10000 + app_id_digit}, 
+                        .run(app_name, ports={f'{DEFAULT_PORT}/tcp': 10000 + app_id_digit}, 
                                 detach=True, name=app_name, volumes={app_dir: {'bind': '/paatr', 'mode': 'rw'}}))
             
         _add_build_log(run_id, app_id, "Successfully ran container", "success", log_type="run")

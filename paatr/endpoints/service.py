@@ -32,26 +32,33 @@ async def hello():
 @service_router.get("/unknown", response_class=HTMLResponse)
 async def unknown():
     content = """
-<pre>
-Unknown app
-===========
+<html>
+    <head>
+        <title>Paatr | unknown app</title>
+    </head>
+    <body>
+        <pre>
+        Unknown app
+        ===========
 
-This is the default page for an unknown app. 
+        This is the default page for an unknown paatr app. 
 
-Look here
-=========
+        Look here
+        =========
 
-If this is supposed to be your paatr app, please check the logs for more info.
+        If this is supposed to be your paatr app, please check the logs for more info.
 
-Tips
-====
+        Tips
+        ====
 
-- Make sure you have a `paatr.yaml` file in the root of your app directory.
-- Make sure you have a `requirements.txt` file in the root of your app 
-  directory, especially if your app depends on it.
-- Make sure you have a `run` script in your `paatr.yaml` file.
-- Make sure you have a listening `port` in your `paatr.yaml` file.
-</pre>
+        - Make sure you have a `paatr.yaml` file in the root of your app directory.
+        - Make sure you have a `requirements.txt` file in the root of your app 
+        directory, especially if your app depends on it.
+        - Make sure you have a `run` script in your `paatr.yaml` file.
+        - Make sure you have a listening `port` in your `paatr.yaml` file.
+        </pre>
+    </body>
+</html>
 """
     return content
 
@@ -118,11 +125,13 @@ async def build_app_(app_id: str, build_data: BuildItem, background_tasks: Backg
         return HTTPException(status_code=404, detail="App not found")
     
     repo = app_data.repo
-    # github_url = repo["git_url"].replace("git://", f"https://{build_data.username}:{build_data.gh_token}@")
-    github_url = repo["git_url"].replace("git://", f"https://")
-
+    if repo.get("private", False):
+        github_url = repo["git_url"].replace("git://", f"https://{build_data.username}:{build_data.gh_token}@")
+    else:
+        github_url = repo["git_url"].replace("git://", f"https://")
+    
     build_id = str(uuid.uuid4())
-    background_tasks.add_task(build_app, build_id, github_url, app_data.name, app_data.app_id)
+    background_tasks.add_task(build_app, build_id, github_url, app_data.name, app_data.app_id, repo["git_url"])
     return {"build_id": build_id}
 
 
