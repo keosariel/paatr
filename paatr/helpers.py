@@ -373,12 +373,17 @@ def _add_subdomain(app_data):
 
         config = f"""
 server {{
-    listen 80;
     server_name {app_name}.paatrapp.live;
 
+    listen 443 ssl; # managed by Certbot
     location / {{
         proxy_pass http://localhost:{10000 + app_data.id};
     }}
+
+    ssl_certificate {Config.CERTIFICATE}/fullchain.pem; # managed by Certbot
+    ssl_certificate_key {Config.CERTIFICATE}/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
 }}
         """
 
