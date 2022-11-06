@@ -226,7 +226,6 @@ def get_image(app_name):
 def remove_image(image):
     try:
         DOCKER_CLIENT.images.remove(image.id)
-        print("deleted image")
     except NotFound:
         pass
 
