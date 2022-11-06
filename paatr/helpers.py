@@ -180,6 +180,10 @@ def build_docker_image(build_id, app_dir, app_name, app_id=""):
     Returns:
         (docker.models.images.Image, str): Docker image object and build logs
     """
+    
+    stop_container(app_name)
+    remove_container(app_name)
+    remove_image(get_image(app_name))
     image, logs = DOCKER_CLIENT.images.build(path=app_dir, tag=app_name, rm=True)
 
     for line in logs:
@@ -219,6 +223,12 @@ def get_image(app_name):
     except ImageNotFound:
         return None
 
+def remove_image(image):
+    try:
+        DOCKER_CLIENT.images.remove(image.id)
+    except NotFound:
+        pass
+
 def get_container(app_name):
     try:
         return DOCKER_CLIENT.containers.get(app_name)
@@ -232,6 +242,24 @@ def stop_container(app_name):
 def remove_container(app_name):
     if cont := get_container(app_name):
         cont.remove(force=True)
+
+def restart_docker_image(app_data, run_id):
+    
+    app_name = app_data.name
+    app_id_digit = app_data.id
+    app_id = app_data.app_id
+    
+
+    try:
+        stop_container(app_name)
+
+        if cont := get_container(app_name):
+            _add_build_log(run_id, app_id, "Restarting container", "setting-up", log_type="run")
+            cont.start()
+        _add_build_log(run_id, app_id, "Successfully restarted container", "success", log_type="run")
+    except Exception as e:
+        _add_build_log(run_id, app_id, "Failed to restart container", "failed", log_type="run")
+        return "Failed to restart app"
 
 def run_docker_image(app_data, run_id):
     """
@@ -251,23 +279,17 @@ def run_docker_image(app_data, run_id):
     if not get_image(app_name):
         _add_build_log(run_id, app_id, "App not found", "failed", log_type="run")
         return "App not found"
-    
+
     try:
-        stop_container(app_name)
+        _add_build_log(run_id, app_id, "Building container", "setting-up", log_type="run")
+        app_dir = os.path.join(Config.APP_FILES_DIR, app_name)
 
-        if cont := get_container(app_name):
-            _add_build_log(run_id, app_id, "Restarting container", "setting-up", log_type="run")
-            cont.start()
-        else:
-            _add_build_log(run_id, app_id, "Building container", "setting-up", log_type="run")
-            app_dir = os.path.join(Config.APP_FILES_DIR, app_name)
-
-            if not os.path.exists(app_dir):
-                os.mkdir(app_dir)
-            _add_build_log(run_id, app_id, "Setting up logs", "setting-up", log_type="run")
-            container = (DOCKER_CLIENT.containers
-                        .run(app_name, ports={f'{DEFAULT_PORT}/tcp': 10000 + app_id_digit}, 
-                                detach=True, name=app_name, volumes={app_dir: {'bind': '/paatr', 'mode': 'rw'}}))
+        if not os.path.exists(app_dir):
+            os.mkdir(app_dir)
+        _add_build_log(run_id, app_id, "Setting up logs", "setting-up", log_type="run")
+        container = (DOCKER_CLIENT.containers
+                    .run(app_name, ports={f'{DEFAULT_PORT}/tcp': 10000 + app_id_digit}, 
+                    detach=True, name=app_name, volumes={app_dir: {'bind': '/paatr', 'mode': 'rw'}}))
             
         _add_build_log(run_id, app_id, "Successfully ran container", "success", log_type="run")
     except Exception as e:

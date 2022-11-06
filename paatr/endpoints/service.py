@@ -9,7 +9,8 @@ from pydantic import BaseModel
 
 from ..models import App
 from ..helpers import (get_app_status, build_app, run_docker_image, 
-                        get_image, stop_container, container_logs, _add_subdomain)
+                        get_image, stop_container, container_logs, _add_subdomain,
+                        restart_docker_image)
 from .. import logger, BUILD_LOGS_TABLE, NEW_DB_CONN
 
 
@@ -159,6 +160,30 @@ async def run_app(app_id: str, background_tasks: BackgroundTasks):
     run_id = str(uuid.uuid4())
 
     background_tasks.add_task(run_docker_image, app_data, run_id)
+
+    return get_app_status(app_data.name)
+
+@service_router.post("/services/apps/{app_id}/restart")
+async def restart_app(app_id: str, background_tasks: BackgroundTasks):
+    """
+    Restart an application
+
+    Args:
+        app_id (str): The ID of the application
+
+    Returns:
+        dict: The application data
+    """
+    logger.info("Restarting app %s", app_id)
+
+    app_data = App.get(app_id)
+    
+    if not app_data:
+        return HTTPException(status_code=404, detail="App not found")
+    
+    run_id = str(uuid.uuid4())
+
+    background_tasks.add_task(restart_docker_image, app_data, run_id)
 
     return get_app_status(app_data.name)
 
