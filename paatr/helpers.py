@@ -128,7 +128,7 @@ def build_app(build_id, git_url, app_name, app_id, repo_url):
                 return f"Error cloning {repo_url}"
 
             files = os.listdir(app_dir)
-            if APP_CONFIG_FILE not in files:
+            if APP_CONFIG_FILE not in files and "":
                 _add_build_log(build_id, app_id, f"Missing {APP_CONFIG_FILE} file", "failed")
                 return "Missing paatr.yaml file"
 
@@ -189,8 +189,8 @@ def build_docker_image(build_id, app_dir, app_name, app_id=""):
     for line in logs:
         if "stream" in line:
             line_str = line["stream"].strip()
-            if line_str.startswith("Step ") or line_str.startswith("--->"):
-                continue
+            # if line_str.startswith("Step ") or line_str.startswith("--->"):
+            #    continue
             if line_str.strip():
                 _add_build_log(build_id, app_id, line_str)
     
@@ -213,8 +213,14 @@ def get_app_status(app_name):
     container = get_container(app_name)
     if container:
         if container.status == "running":
-             return {"message": "App is running", "status": "running"}
-
+            status = "running"
+            message = "App is running"
+        else:
+            status = "stopped"
+            message = "App is not running"
+    
+        return {"message": message, "status": status}
+        
     return {"message": "App is not running", "status": "not-running"}
 
 def get_image(app_name):
