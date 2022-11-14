@@ -232,7 +232,7 @@ def get_image(app_name):
 def remove_image(image):
     try:
         DOCKER_CLIENT.images.remove(image.id)
-    except NotFound:
+    except Exception:
         pass
 
 def get_container(app_name):
