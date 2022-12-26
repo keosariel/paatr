@@ -238,5 +238,4 @@ async def app_status(app_id: str, build_id: str = "", all: str = "false", run: s
     elif build_id.strip():
         data["build"] = app_data.get(build_id, {})
     
-
     return data

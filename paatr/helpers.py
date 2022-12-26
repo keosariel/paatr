@@ -116,6 +116,7 @@ def build_app(build_id, git_url, app_name, app_id, repo_url):
     Returns:
         str: Build message
     """
+    global APP_CONFIG_FILE
 
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -127,12 +128,21 @@ def build_app(build_id, git_url, app_name, app_id, repo_url):
                 _add_build_log(build_id, app_id, f"Error cloning {repo_url}", "failed")
                 return f"Error cloning {repo_url}"
 
-            files = os.listdir(app_dir)
-            if APP_CONFIG_FILE not in files and "":
-                _add_build_log(build_id, app_id, f"Missing {APP_CONFIG_FILE} file", "failed")
-                return "Missing paatr.yaml file"
+            files = list(map(lambda x:x.lower(), os.listdir(app_dir)))
+            dockerfile = "dockerfile"
 
-            (is_valid, config) = get_app_config(os.path.join(app_dir, APP_CONFIG_FILE))
+            if APP_CONFIG_FILE not in files:
+                if dockerfile in files:
+                    APP_CONFIG_FILE = dockerfile
+                else:
+                    _add_build_log(build_id, app_id, f"Missing {APP_CONFIG_FILE} file", "failed")
+                    return "Missing paatr.yaml file"
+            
+            if APP_CONFIG_FILE != dockerfile:
+                (is_valid, config) = get_app_config(os.path.join(app_dir, APP_CONFIG_FILE))
+            else:
+                is_valid = True
+                config = {}
 
             if not is_valid:
                 _add_build_log(build_id, app_id, config, "failed")
@@ -140,18 +150,22 @@ def build_app(build_id, git_url, app_name, app_id, repo_url):
             else:
                 _add_build_log(build_id, app_id, "Successfully parsed config file")
 
-            if INSTALLATION_FILE in files:
+            if INSTALLATION_FILE in files and APP_CONFIG_FILE != dockerfile:
                 _add_build_log(build_id, app_id, f"Adding installation file `{INSTALLATION_FILE}`")
                 config["run"] = [f"pip install -r {INSTALLATION_FILE}"]
                 _add_build_log(build_id, app_id, "Successfully added installation file")
 
-            config["name"] = app_name
-            dockerfile = generate_docker_config(config)
+            if APP_CONFIG_FILE != dockerfile:
+                config["name"] = app_name
+                dockerfile = generate_docker_config(config)
 
-            with open(os.path.join(tmp_dir, "dockerfile"), "w") as fp:
-                fp.write(dockerfile)
+                with open(os.path.join(tmp_dir, "dockerfile"), "w") as fp:
+                    fp.write(dockerfile)
 
-            _add_build_log(build_id, app_id, "Installing dependencies...")
+                _add_build_log(build_id, app_id, "Installing dependencies...")
+            else:
+                _add_build_log(build_id, app_id, "Using configuration from dockerfile...")
+
             image, _ = build_docker_image(build_id, tmp_dir, app_name, app_id)
 
         _add_build_log(build_id, app_id, "Successfully built image", "success")
